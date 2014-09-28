@@ -80,8 +80,9 @@ int DspOutDelay(Outdly *OutPutDly);
 
 
 
-void DspClsCrossbar1();
+void DspClsCrossbar1(uint8 rd,uint32_t rep[64]);
 
+void DspWiteCrossbar1(uint32_t rep[64]);
 
 
 /*
@@ -390,6 +391,37 @@ void VuDetect(uint8 *outVal);
 
 
 /**
+* 6路输出音量设置
+* This is a detail description.
+* @in       输入音源【暂时不使用】
+* @out     输出音源
+* @gain,  输出音量 
+* @par 修改日志
+*      XXX于2014-9-28创建
+*/
+void volOutput(uint8_t in, uint8_t out, fp32 gain);
+
+/**
+* 测试信号源输出enable
+* This is a detail description.
+* @par 修改日志
+*      XXX于2014-9-28创建
+*/
+void DspSignalSourceEnable();
+
+
+/**
+* 测试信号源输出cancel
+* This is a detail description.
+* @par 修改日志
+*      XXX于2014-9-28创建
+*/
+void DspSignalSourceCancel();
+
+
+
+
+/**
 * 测试信号源输出选择
 * This is a detail description.
 * @in       输入音源
@@ -398,10 +430,6 @@ void VuDetect(uint8 *outVal);
 * @type   测试类型
 * @retval  0 成功
 * @retval  -1   错误 
-* @par 标识符
-*      保留
-* @par 其它
-*      无
 * @par 修改日志
 *      XXX于2014-9-20创建
 */

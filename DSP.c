@@ -36,6 +36,13 @@
 
 #define DEBUG 1
 
+volatile uint32_t outVolFlag[2][6]={0};    //输出路由标志，1: 输出 0: 没输出
+uint32_t outVolFlagBak[2][6]={0}; //输出路由标志，1: 输出 0: 没输出 【副本】 
+uint32_t repCrossBar1[64]={0};
+volatile uint32_t SSFlag=0;
+
+
+
 /*********************************************************************************************************
 ** Function name:       DspMixerSet
 ** Descriptions:        路由控制,Crossbar_1模块
@@ -54,6 +61,11 @@ int DspMixerSet(uint8_t rd,uint32_t in, uint32_t out, float mixer)
     printf("-->%s> rd=%d,in=%d,out=%d,mixer=%f\n",__FUNCTION__,rd,in,out,mixer);
 #endif  
 
+    if (0 == DAPFloatTo5P23(mixer))
+        outVolFlag[in][out]= 0;
+    else
+        outVolFlag[in][out]= 1;
+    
     memset(mix_val,0,4);
 
 	switch (in)
@@ -493,6 +505,7 @@ int DspMixerSet(uint8_t rd,uint32_t in, uint32_t out, float mixer)
     //    printf("%x,",mix_val[i]);
     //}
     //printf("\n ---> ");
+
 
 	ret = I2CWriteMultiWord(TAS_SLA0, mix_i2c_addr, mix_val, 4);
     
@@ -963,7 +976,8 @@ int DspMixerSetSignalSource(uint8_t rd,uint32_t in, uint32_t out, float mixer)
     //uint32_t cls[4]={0,0,0,0},addr=0x90;
     //for(int i=0;i<16;i++)
     //    I2CWriteMultiWord(TAS_SLA0, addr+i, cls, 4);
-    DspClsCrossbar1();
+    uint32 rep[1];
+    DspClsCrossbar1(0,rep);
 
 
 	ret = I2CWriteMultiWord(TAS_SLA0, mix_i2c_addr, mix_val, 4);
@@ -980,17 +994,49 @@ int DspMixerSetSignalSource(uint8_t rd,uint32_t in, uint32_t out, float mixer)
 	return ret;
 }
 
-/**
-*   clean crossbar_1 reg    v2.1
-*   2014.9.27
-**/
-void DspClsCrossbar1()
-{
-    uint32_t cls[4]={0,0,0,0},addr=0x90;
 
+/**
+* clean crossbar_1 reg    v2.1
+* This is a detail description.
+* @par 修改日志
+*      XXX于2014-9-28创建
+*/
+void DspClsCrossbar1(uint8 rd,uint32_t rep[64])
+{
+#if DEBUG
+        printf("-->%s> rd=%d,rep[]\n",__FUNCTION__,rd);
+#endif
+
+    uint32_t cls[4]={0,0,0,0},addr=0x90;
+    int j=0;
+    if (rd) {
+        for(int i=0;i<16;i++,j+=4)
+        I2CReadMultiWord(TAS_SLA0, addr+i, rep+j, 4);  
+    }
     for(int i=0;i<16;i++)
         I2CWriteMultiWord(TAS_SLA0, addr+i, cls, 4);   
 }
+
+/**
+* crossbar1 write all reg     v2.1
+* This is a detail description.
+* @par 修改日志
+*      XXX于2014-9-28创建
+*/
+void DspWiteCrossbar1(uint32_t rep[64])
+{
+#if DEBUG
+    printf("-->%s> rep[]\n",__FUNCTION__);
+#endif
+    uint32_t addr=0x90;
+    int j=0;
+
+    for(int i=0;i<16;i++,j+=4)
+    I2CWriteMultiWord(TAS_SLA0, addr+i, rep+j, 4);  
+
+}
+
+
 
 /*********************************************************************************************************
 ** Function name:       DspMixerSet4Ch
@@ -3232,6 +3278,149 @@ void VuDetect(uint8 *outVal)
 #endif    
 }
 
+/**
+* 6路输出音量设置
+* This is a detail description.
+* @in       输入音源【暂时不使用】
+* @out     输出音源
+* @gain,  输出音量 
+* @retval  0 成功
+* @retval  -1   错误 
+* @par 标识符
+*      保留
+* @par 其它
+*      无
+* @par 修改日志
+*      XXX于2014-9-28创建
+*/
+void volOutput(uint8_t in, uint8_t out, fp32 gain)
+{
+#if DEBUG
+                printf("-->%s> out=%d,gain=%f\n",__FUNCTION__,out,gain);
+#endif
+
+    uint8_t p0=0,p1=0;           //position
+    uint32_t volume;
+
+    uint8 mix_i2c_addr0 = 0;
+	uint8 mix_i2c_addr1 = 0;
+    uint32_t mixer[4]={0};
+
+    if (gain < -60) gain = 0;
+    volume = DAPFloatTo5P23(pow(10.0, gain*0.05));
+    
+    if (out >= 6 ) return;
+    
+    switch (out) {
+    case 0:
+        mix_i2c_addr0 = MIXER01_I2C_ADDR;
+	    mix_i2c_addr1 = MIXER01_I2C_ADDR;
+        p0=0; p1=1;
+        break;
+    case 1:        
+        mix_i2c_addr0 = MIXER02_I2C_ADDR;
+	    mix_i2c_addr1 = MIXER02_I2C_ADDR;
+        p0=0; p1=1;
+        break;
+    case 2:        
+        mix_i2c_addr0 = MIXER03_I2C_ADDR;
+	    mix_i2c_addr1 = MIXER03_I2C_ADDR;
+        p0=0; p1=1;
+        break;
+    case 3:
+        mix_i2c_addr0 = MIXER04_I2C_ADDR;
+	    mix_i2c_addr1 = MIXER04_I2C_ADDR;
+        p0=0; p1=1;
+        break;
+    case 4:
+        mix_i2c_addr0 = MIXER06_I2C_ADDR;
+	    mix_i2c_addr1 = MIXER06_I2C_ADDR;
+        p0=1; p1=2;
+        break;
+    case 5:
+        mix_i2c_addr0 = MIXER08_I2C_ADDR;
+	    mix_i2c_addr1 = MIXER09_I2C_ADDR;
+        p0=3; p1=0;
+        break;
+    default:break;
+    }
+    
+    if (outVolFlag[0][out]) {
+        memset(mixer,0,4);
+        I2CReadMultiWord(TAS_SLA0, mix_i2c_addr0, mixer, 4);
+        mixer[p0] = volume;
+        I2CWriteMultiWord(TAS_SLA0, mix_i2c_addr0, mixer, 4);
+    }
+    
+    if (outVolFlag[1][out]) {
+        memset(mixer,0,4);
+        I2CReadMultiWord(TAS_SLA0, mix_i2c_addr1, mixer, 4);
+        mixer[p1] = volume;
+        I2CWriteMultiWord(TAS_SLA0, mix_i2c_addr1, mixer, 4);
+    }
+}
+
+/**
+* 测试信号源输出enable
+* This is a detail description.
+* @retval  0 成功
+* @retval  -1   错误 
+* @par 标识符
+*      保留
+* @par 其它
+*      无
+* @par 修改日志
+*      XXX于2014-9-28创建
+*/
+void DspSignalSourceEnable()
+{
+#if DEBUG
+    printf("-->%s> SSFlag=%d\n",__FUNCTION__,SSFlag);
+#endif
+    if (SSFlag == 1) {
+        printf("__>%s> SSFlag=%d\n",__FUNCTION__,SSFlag);
+        return;
+    }
+    SSFlag = 1;
+    memcpy(outVolFlagBak,outVolFlag,sizeof(outVolFlagBak));
+    for(int i=0;i<2;i++)
+    for(int j=0;j<6;j++)
+        printf("%d,",outVolFlag[i][j]);
+    memset(outVolFlag,0,sizeof(outVolFlag));
+    DspClsCrossbar1(1,repCrossBar1);
+    printf("\n==>%s> end\n",__FUNCTION__);
+}
+
+/**
+* 测试信号源输出cancel
+* This is a detail description.
+* @retval  0 成功
+* @retval  -1   错误 
+* @par 标识符
+*      保留
+* @par 其它
+*      无
+* @par 修改日志
+*      XXX于2014-9-28创建
+*/
+void DspSignalSourceCancel()
+{
+#if DEBUG
+        printf("-->%s> SSFlag=%d\n",__FUNCTION__,SSFlag);
+#endif
+    if (SSFlag == 0) {
+        printf("__>%s> SSFlag=%d\n",__FUNCTION__,SSFlag);
+        return;
+    }
+    SSFlag = 0;
+    memcpy(outVolFlag,outVolFlagBak,sizeof(outVolFlag));
+    DspWiteCrossbar1(repCrossBar1);   
+    for(int i=0;i<2;i++)
+    for(int j=0;j<6;j++)
+        printf("%d,",outVolFlag[i][j]);
+    printf("\n==>%s> SSFlag=%d\n",__FUNCTION__,SSFlag);
+}
+
 
 /**
 * 测试信号源输出选择
@@ -3252,41 +3441,39 @@ void VuDetect(uint8 *outVal)
 int DspSigSourSelectOut(uint8_t in, uint8_t out, uint8_t total, uint8_t type)
 {
 #if DEBUG
-    printf("-->%s> in=%d,out=%d,total=%d,type=%d\n",__FUNCTION__,
-        in,out,total,type);
+    printf("-->%s> in=%d,out=%d,total=%d,type=%d,SSFlag=%d\n",__FUNCTION__,
+        in,out,total,type,SSFlag);
 #endif
+    uint8_t rd = 0;
+    float mixer = 1.0;
 
-    DspClsCrossbar1();
-
+    if (SSFlag == 0) return 0;
+    
     if (out >= total) return -1;
+
+    uint32_t rep[1];
+    DspClsCrossbar1(0,rep);
+    memset(outVolFlag,0,sizeof(outVolFlag));
+    
     if (type == 0) {
-        uint8_t rd = 0;
-        float mixer = 1.0;
-        DspClsCrossbar1();
         DspMixerSet(rd, in, out, mixer);
+        outVolFlag[in][out] = 1;
     } else if (type == 1) {
-        float mixer = 1.0;
-        uint8_t rd = 0;
         for(int i=0;i<total;i++) {
             DspMixerSet(rd, in, i, mixer);
             sleep(4);
             DspMixerSet(rd, in, i, 0.0);
         }
+        DspMixerSet(rd, in, 0, mixer);
+        outVolFlag[in][0] = 1;
     } else if (type == 2) {
-        float mixer = 1.0;
-        uint8_t rd = 1;
+        rd = 1;
         for(int i=0;i<total;i++) {
             DspMixerSet(rd, in, i, mixer);
+            outVolFlag[in][i] = 1;
         }
-    } else if (type == 3) {
-        float mixer = 0.0;
-        uint8_t rd = 0;
-        DspMixerSet(rd, in, out, mixer);
-    } else if (type == 4) {
-        float mixer = 1.0;
-        uint8_t rd = 0;
-        DspMixerSet(rd, in, out, mixer);
     }
+    
 }
 
 
@@ -3312,9 +3499,11 @@ void AllMixThrough()
  #if 1   
       in = 0;
       DspMixerSet(rd, in, 0, 1.0);  //x11
+      outVolFlag[0][0]= 1;
       //DspMixerSet(rd, in, 2, 1.0);  //x13
       in = 1;
       DspMixerSet(rd, in, 1, 1.0);  //x22
+      outVolFlag[1][1]= 1;
       //DspMixerSet(rd, in, 3, 0.0);  //x24
  #endif
     
@@ -3488,8 +3677,10 @@ int DspFunModInit(void)
     	DspOutDelay(p);
     }
 	free(p);
-
-   DspClsCrossbar1();
+    
+   uint32_t rep[1]; 
+   DspClsCrossbar1(0,rep);
+   memset(outVolFlag,0,sizeof(outVolFlag));
    AllMixThrough();
 
     #if 0
