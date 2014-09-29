@@ -3348,15 +3348,19 @@ void volOutput(uint8_t in, uint8_t out, fp32 gain)
     if (outVolFlag[0][out]) {
         memset(mixer,0,4);
         I2CReadMultiWord(TAS_SLA0, mix_i2c_addr0, mixer, 4);
+        printf("read out[0][%d]=1 X1%d connect. %x,%x,%x,%x\n",out,out+1,mixer[0],mixer[1],mixer[2],mixer[3]);
         mixer[p0] = volume;
         I2CWriteMultiWord(TAS_SLA0, mix_i2c_addr0, mixer, 4);
+        printf("write out[0][%d]=1 X1%d connect. %x,%x,%x,%x\n",out,out+1,mixer[0],mixer[1],mixer[2],mixer[3]);
     }
     
     if (outVolFlag[1][out]) {
         memset(mixer,0,4);
         I2CReadMultiWord(TAS_SLA0, mix_i2c_addr1, mixer, 4);
+        printf("read out[1][%d]=1 X2%d connect. %x,%x,%x,%x\n",out,out+1,mixer[0],mixer[1],mixer[2],mixer[3]);
         mixer[p1] = volume;
         I2CWriteMultiWord(TAS_SLA0, mix_i2c_addr1, mixer, 4);
+        printf("write out[1][%d]=1 X2%d connect. %x,%x,%x,%x\n",out,out+1,mixer[0],mixer[1],mixer[2],mixer[3]);
     }
 }
 
@@ -3496,7 +3500,7 @@ void AllMixThrough()
       uint32_t in = 0;
       float mixer = 1.0;
       uint8_t rd = 0;
- #if 1   
+ #if 0   
       in = 0;
       DspMixerSet(rd, in, 0, 1.0);  //x11
       outVolFlag[0][0]= 1;
@@ -3505,6 +3509,9 @@ void AllMixThrough()
       DspMixerSet(rd, in, 1, 1.0);  //x22
       outVolFlag[1][1]= 1;
       //DspMixerSet(rd, in, 3, 0.0);  //x24
+ #else
+        DspMixerSet(1, in, 0, 1.0);  //x11
+        DspMixerSet(1, 1, 0, 1.0);  //x21
  #endif
     
       //DspMixerSet_2(0,0,0.0);   //x11
