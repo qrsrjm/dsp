@@ -3500,7 +3500,7 @@ void AllMixThrough()
       uint32_t in = 0;
       float mixer = 1.0;
       uint8_t rd = 0;
- #if 0   
+ #if 1  
       in = 0;
       DspMixerSet(rd, in, 0, 1.0);  //x11
       outVolFlag[0][0]= 1;
