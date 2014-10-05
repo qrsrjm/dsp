@@ -2500,19 +2500,48 @@ void DspSetSctAgc(uint8_t type, uint8_t en, fp32 T2, fp32 k2, fp32 attack, fp32 
 mixer[0,1,2,3]: 0=直通,1=hp, 2=bp, 3=lp
 
 **/
-void DspSctEn(float mixer[], uint8_t Ch)
+//void DspSctEn(float mixer[], uint8_t Ch)
+void DspSctEn(uint8_t en, uint8_t Ch)
 {
 #if DEBUG
-    printf("-->%s> ch=%d,mix=%f,%f,%f,%f\n",__FUNCTION__,
-        Ch,mixer[0],mixer[1],mixer[2],mixer[3]);
+    printf("-->%s> ch=%d,en=%d\n",__FUNCTION__, Ch,en);
 #endif
-    if (Ch) {
-        DspMixerSet4Ch(0, 1, mixer); 
-    } else {
-        DspMixerSet4Ch(0, 0, mixer); 
-    }
+	float mixer[4] = {0};
+	if (en) {
+		mixer[0] = 0.0; mixer[1]=mixer[2]=mixer[3] = 1.0;
+	} else {
+		mixer[0] = 1.0; mixer[1]=mixer[2]=mixer[3] = 0.0;
+	}
+
+	if (Ch) {
+		DspMixerSet4Ch(0, 1, mixer); 
+	} else {
+		DspMixerSet4Ch(0, 0, mixer); 
+	}
+
 }
 
+/**
+*             DspSctMix()
+* This is a detail description.
+* @mixer       路由系数
+* @Ch     通道
+* @par 标识符
+* @par 修改日志
+*      XXX于2014-10-4创建
+*/
+void DspSctMix(float mixer[], uint8_t Ch)
+{
+#if DEBUG
+	printf("-->%s> ch=%d,mix=%f,%f,%f,%f\n",__FUNCTION__,
+		Ch,mixer[0],mixer[1],mixer[2],mixer[3]);
+#endif
+	if (Ch) {
+		DspMixerSet4Ch(0, 1, mixer); 
+	} else {
+		DspMixerSet4Ch(0, 0, mixer); 
+	}
+}
 
 /*
 ***************************************************************************************************
@@ -3644,7 +3673,7 @@ int DspFunModInit(void)
 	//关闭 SCT声音补偿
     float mixer[4]={1.0,0,0,0};
     for (i = 0; i<2; i++)
-        DspSctEn(mixer, i);
+        DspSctEn(0, i);
 
 
 	//关闭测试音源
