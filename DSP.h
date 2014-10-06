@@ -252,10 +252,10 @@ void DspSetSctDepth(uint8_t type, float VolDepth, uint8_t Ch);
 ***************************************************************************************************
 */
 int DspAGC(uint8 SCT_Ch, DRC_STR AGC);
+void DspSetSctAgc(uint8_t type, DRC_STR agc, uint8_t Ch);
 
 
-
-void DspSetSctAgc(uint8_t type, uint8_t en, fp32 T2, fp32 k2, fp32 attack, fp32 release, uint8_t Ch);
+//void DspSetSctAgc(uint8_t type, uint8_t en, fp32 T2, fp32 k2, fp32 attack, fp32 release, uint8_t Ch);
 
 void DspSctEn(uint8_t en, uint8_t Ch);
 
@@ -338,6 +338,7 @@ int DspACHBp_HP(CHanHLPF_STR *ChHP);
 */
 int DspACHBp_LP(CHanHLPF_STR *ChLP);
 
+void DspACHBp_BP(BPF_STR *bpf, uint8 Ch);
 
 
 /*********************************************************************************************************
@@ -482,6 +483,7 @@ int DspDigChansMux(uint8 DigChan);
 ** Returned value:      нч
 *********************************************************************************************************/
 int DspFunModInit(void);
+int DspAllByPass(void);
 
 
 

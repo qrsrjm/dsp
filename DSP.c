@@ -1176,7 +1176,8 @@ int DspGain(VOL_OP *gain)
     I2CReadMultiWord(TAS_SLA0, mix_i2c_addr0, mixer, 4);
     I2CReadMultiWord(TAS_SLA0, mix_i2c_addr1, mixer+4, 4);
     printf("0:mix=%x,%x,%x,%x, 1:%x,%x,%x,%x\n",mixer[0],mixer[1],mixer[2],mixer[3],mixer[4],mixer[5],mixer[6],mixer[7]);
-    if(mixer[gain->Ch] == 0 || mixer[4+gain->Ch]==0) return 0;
+
+    //if(mixer[gain->Ch] == 0 || mixer[4+gain->Ch]==0) return 0;
     
     if (gain->Ch == 0) {
         //memset(mixer,0,4);
@@ -2463,18 +2464,19 @@ int DspAGC(uint8 SCT_Ch, DRC_STR AGC)
 }
 
 
-void DspSetSctAgc(uint8_t type, uint8_t en, fp32 T2, fp32 k2, fp32 attack, fp32 release, uint8_t Ch)
+//void DspSetSctAgc(uint8_t type, uint8_t en, fp32 T2, fp32 k2, fp32 attack, fp32 release, uint8_t Ch)
+void DspSetSctAgc(uint8_t type, DRC_STR agc, uint8_t Ch)
 {
-    DRC_STR agc;
+  /*  DRC_STR agc;
     agc.T2 = T2;
     agc.k2 = k2;
     agc.Attack = attack;
     agc.Release = release;
-    agc.en = en;
+    agc.en = en;*/
     
 #if DEBUG
     printf("-->%s> type=%d,T2=%f,k2=%f,Attack=%f,Release=%f,en=%d,ch=%d\n",__FUNCTION__,type,
-        T2,k2,attack,release,en,Ch);
+        agc.T2,agc.k2,agc.Attack,agc.Release,agc.en,Ch);
 #endif
 
     if (Ch) {  
@@ -2948,10 +2950,8 @@ int DspACHBp_LP(CHanHLPF_STR *ChLP)
 #endif
 	if (1 == ChLP->xpf.en )
 	{
-
 		switch (ChLP->xpf.Type)
 		{
-
 		case BW_06: DAPBesAndButLPF(1, ChLP->xpf.Fc, lpfCoef, 0); break;
 		case BW_12: DAPBesAndButLPF(2, ChLP->xpf.Fc, lpfCoef, 0); break;
 		case BW_24: DAPBesAndButLPF(4, ChLP->xpf.Fc, lpfCoef, 0); break;
@@ -3017,6 +3017,93 @@ int DspACHBp_LP(CHanHLPF_STR *ChLP)
 
 	//	DAPDelay(DLY_1MS*25);		
 	return ret;
+}
+
+
+/**
+*    第四通道带通
+* This is a detail description.
+* @retval  0 成功
+* @retval  -1   错误 
+* @par 标识符
+* @par 修改日志
+*      XXX于2014-10-6创建
+*/
+void DspACHBp_BP(BPF_STR *bpf, uint8 Ch)
+{
+#if DEBUG
+    printf("-->%s> Fp:%d,Fs:%d,Type:%d,en:%d,Ch=%d\n",__FUNCTION__,
+         bpf->Fp,bpf->Fs,bpf->Type,bpf->en,Ch);
+#endif
+
+    uint32 hpfCoef[20];
+    uint32 lpfCoef[20];
+
+    if (bpf->en) {
+        switch (bpf->Type) {
+        case BW_06: DAPBesAndButHPF(1, bpf->Fp, hpfCoef, 0);
+			        DAPBesAndButLPF(1, bpf->Fs, lpfCoef, 0); 
+                    break;
+		case BW_12: DAPBesAndButHPF(2, bpf->Fp, hpfCoef, 0);
+			        DAPBesAndButLPF(2, bpf->Fs, lpfCoef, 0); 
+                    break;
+		case BL_06:	DAPBesAndButHPF(1, bpf->Fp, hpfCoef, 1);
+			        DAPBesAndButLPF(1, bpf->Fs, lpfCoef, 1);
+                    break;
+		case BW_24: DAPBesAndButHPF(4, bpf->Fp, hpfCoef, 0);
+			        DAPBesAndButLPF(4, bpf->Fs, lpfCoef, 0); 
+                    break;
+		case BL_12:	DAPBesAndButHPF(2, bpf->Fp, hpfCoef, 1);
+			        DAPBesAndButLPF(2, bpf->Fs, lpfCoef, 1); 
+                    break;
+		case BL_24:	DAPBesAndButHPF(4, bpf->Fp, hpfCoef, 1);
+			        DAPBesAndButLPF(4, bpf->Fs, lpfCoef, 1); 
+                    break;
+		case LK_12:	DAPLinkwitzHPF(2, bpf->Fp, hpfCoef);
+			        DAPLinkwitzLPF(2, bpf->Fs, lpfCoef);
+                    break;
+		case LK_24:	DAPLinkwitzHPF(4, bpf->Fp, hpfCoef);
+			        DAPLinkwitzLPF(4, bpf->Fs, lpfCoef); 
+                    break;
+		default:
+			hpfCoef[0] = hpfCoef[5] = hpfCoef[10] = hpfCoef[15] = 0x00800000;
+			hpfCoef[1] = hpfCoef[6] = hpfCoef[11] = hpfCoef[16] = 0x00000000;
+			hpfCoef[2] = hpfCoef[7] = hpfCoef[12] = hpfCoef[17] = 0x00000000;
+			hpfCoef[3] = hpfCoef[8] = hpfCoef[13] = hpfCoef[18] = 0x00000000;
+			hpfCoef[4] = hpfCoef[9] = hpfCoef[14] = hpfCoef[19] = 0x00000000;
+
+			lpfCoef[0] = lpfCoef[5] = lpfCoef[10] = lpfCoef[15] = 0x00800000;
+			lpfCoef[1] = lpfCoef[6] = lpfCoef[11] = lpfCoef[16] = 0x00000000;
+			lpfCoef[2] = lpfCoef[7] = lpfCoef[12] = lpfCoef[17] = 0x00000000;
+			lpfCoef[3] = lpfCoef[8] = lpfCoef[13] = lpfCoef[18] = 0x00000000;
+			lpfCoef[4] = lpfCoef[9] = lpfCoef[14] = lpfCoef[19] = 0x00000000;
+			break;
+        }
+    } else {
+		hpfCoef[0] = hpfCoef[5] = hpfCoef[10] = hpfCoef[15] = 0x00800000;
+		hpfCoef[1] = hpfCoef[6] = hpfCoef[11] = hpfCoef[16] = 0x00000000;
+		hpfCoef[2] = hpfCoef[7] = hpfCoef[12] = hpfCoef[17] = 0x00000000;
+		hpfCoef[3] = hpfCoef[8] = hpfCoef[13] = hpfCoef[18] = 0x00000000;
+		hpfCoef[4] = hpfCoef[9] = hpfCoef[14] = hpfCoef[19] = 0x00000000;
+
+		lpfCoef[0] = lpfCoef[5] = lpfCoef[10] = lpfCoef[15] = 0x00800000;
+		lpfCoef[1] = lpfCoef[6] = lpfCoef[11] = lpfCoef[16] = 0x00000000;
+		lpfCoef[2] = lpfCoef[7] = lpfCoef[12] = lpfCoef[17] = 0x00000000;
+		lpfCoef[3] = lpfCoef[8] = lpfCoef[13] = lpfCoef[18] = 0x00000000;
+		lpfCoef[4] = lpfCoef[9] = lpfCoef[14] = lpfCoef[19] = 0x00000000;
+    }
+    
+    switch (Ch){
+    case 4: 
+		I2CWriteMultiWord(TAS_SLA0, BP5_Ins1, &hpfCoef[0], 5);
+		I2CWriteMultiWord(TAS_SLA0, BP5_Ins2, &hpfCoef[5], 5);
+        
+        I2CWriteMultiWord(TAS_SLA0, BP5_Ins3, &lpfCoef[0], 5);
+		I2CWriteMultiWord(TAS_SLA0, BP5_Ins4, &lpfCoef[5], 5);
+        break;   
+    default:break;
+    }
+        
 }
 
 
@@ -3506,7 +3593,6 @@ int DspSigSourSelectOut(uint8_t in, uint8_t out, uint8_t total, uint8_t type)
             outVolFlag[in][i] = 1;
         }
     }
-    
 }
 
 
@@ -3618,6 +3704,20 @@ int DspDigChansMux(uint8 DigChan)
 *********************************************************************************************************/
 int DspFunModInit(void)
 {
+#if DEBUG
+        printf("-->%s> \n",__FUNCTION__);
+#endif
+}
+
+/*********************************************************************************************************
+** Function name:       DspAllByPass
+** Descriptions:        实现DSP各个功能模块的初始化，3D旁通，各个PEQ旁通，HP旁通，SCT旁通，音量模块
+** input parameters:    无
+** output parameters:   无
+** Returned value:      无
+*********************************************************************************************************/
+int DspAllByPass(void)
+{
 
 	char ret=0;   
     uint8_t i, j;
@@ -3666,15 +3766,31 @@ int DspFunModInit(void)
 
 	//关闭3dmusic/////
 	float mix[4]={1.0,0,0,0};
-	for (i = 0; i<2; i++)
+    DLY_STR delay; delay.en = delay.Dly = 0;
+	for (i = 0; i<2; i++) {
         Dsp3DMusicMix(mix,i);   //Dsp3DMusicEn(0, i);
-
+        Dsp3DMusicDelay(delay, i);
+    }
 
 	//关闭 SCT声音补偿
     float mixer[4]={1.0,0,0,0};
     for (i = 0; i<2; i++)
         DspSctEn(0, i);
-
+    DRC_STR agc;
+    memset(&agc,0,sizeof(agc));
+    agc.en = 0; agc.k2 = 1.0;
+    for (i = 0; i<3; i++) {
+        DspSetSctAgc(i,agc,0);
+        DspSetSctAgc(i,agc,1);
+    }
+    
+    HLPF_STR hpf; hpf.en = 0;
+    BPF_STR bpf;  bpf.en = 0;
+    for (i = 0; i<2; i++) {
+        DspSctHp(i, hpf);
+        DspSctLp(i, hpf);
+        DspSctBp(i, bpf);
+    }
 
 	//关闭测试音源
 	//DspSigSourChoise(TestSignal);
