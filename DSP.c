@@ -3569,7 +3569,7 @@ int DspSigSourSelectOut(uint8_t in, uint8_t out, uint8_t total, uint8_t type)
 
     if (SSFlag == 0) return 0;
     
-    if (out >= total) return -1;
+    //if (out >= total) return -1;
 
     uint32_t rep[1];
     DspClsCrossbar1(0,rep);
