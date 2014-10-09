@@ -61,10 +61,13 @@ int DspMixerSet(uint8_t rd,uint32_t in, uint32_t out, float mixer)
     printf("-->%s> rd=%d,in=%d,out=%d,mixer=%f\n",__FUNCTION__,rd,in,out,mixer);
 #endif  
 
-    if (0 == DAPFloatTo5P23(mixer))
+    if (0 == DAPFloatTo5P23(mixer)) {
         outVolFlag[in][out]= 0;
-    else
+    } else {
         outVolFlag[in][out]= 1;
+    }
+    
+    printf("outVolFlag[%d][%d]=%d\n",in,out,outVolFlag[in][out]);
     
     memset(mix_val,0,4);
 
